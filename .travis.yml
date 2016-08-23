@@ -1,0 +1,123 @@
+# see http://about.travis-ci.org/docs/user/languages/php/ for more hints
+language: php
+
+# list any PHP version you want to test against
+php:
+  # aliased to a recent 5.6.x version
+  - 5.6
+
+env:
+  - mysql
+
+services:
+  - mysql
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y install aptitude
+  - sudo apt-get -y install apache2 libapache2-mod-php5 php5-mysqlnd php5-gd php-pear php5-curl lynx-cur libxml2-dev software-properties-common tree perl
+  - sudo pip install --upgrade pycrypto urllib3
+  - sudo pip install simple-crypt MySQL-python pjson boto numpy boto3
+  
+install:
+  ######################
+  # CHANGE BRANCH HERE #
+  ######################
+  - git clone --branch=2016_07_18_travisupdate https://github.com/UMMS-biocore/dolphin-tools.git /home/travis/build/dolphin-ui
+  - cd /home/travis/build/dolphin-ui
+  
+before_script:
+  # Create Files
+  - printf "[Dolphin]\nSALT=test123\nPEPPER=test456\nMASTER=travis\nAMAZON=travis\n" > config/.salt
+  # Install apache, PHP, and supplimentary programs. curl and lynx-cur are for debugging the container.
+  - sudo a2enmod actions
+  - sudo a2enmod php5
+  - sudo a2enmod rewrite
+  - sudo service apache2 restart
+  # dolphin repos
+  - git clone --branch=2016_08_17_travisupdate https://github.com/Rhaknam/dolphin-tools.git /home/travis/build/dolphin_tools
+  - git clone https://github.com/UMMS-Biocore/dolphin-bin.git /home/travis/build/dolphin-bin
+  - git clone https://github.com/UMMS-Biocore/dolphin-genome-data.git /home/travis/build/dolphin-genome-data
+  - sudo mkdir -p /home/travis/build/pub /home/travis/build/logs tmp/files tmp/logs tmp/logs/run4 /home/travis/build/testrun1
+  - sudo ln -s $(pwd) /var/www/dolphin
+  - sudo ln -s /home/travis/build/pub public/pub
+  - sudo chmod -R 777 /home
+  # Manually set up the apache environment variables
+  - sudo mysql -u root -e "CREATE USER 'myproject'@'localhost' IDENTIFIED BY 'mypass'"
+  - sudo mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'myproject'@'localhost' WITH GRANT OPTION;"
+  # update database
+  - sudo gzip -d db/biocoredb.sql.gz
+  - sudo mysql -e "CREATE DATABASE biocore;" -uroot
+  - sudo mysql -e "CREATE USER 'bioinfo'@'localhost' IDENTIFIED BY 'bioinfo2013'; GRANT ALL ON *.* TO 'bioinfo'@'localhost';" -uroot
+  - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/biocoredb.sql
+  - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/2016_08_15_sqlmerge.sql
+  - sudo mysql -e "use biocore; UPDATE ngs_samples set samplename = name;" -uroot
+  - sudo mysql -e "use biocore; INSERT INTO amazon_credentials ( aws_access_key_id, aws_secret_access_key, bucket ) VALUES ( 'test_access', 'test_secret', 'test_bucket' );" -uroot
+  - sudo mysql -e "use biocore; INSERT INTO ngs_organism (organism, organism_symbol) VALUES ('mousetest', 'mm10'); UPDATE ngs_samples SET organism_id = 1;" -uroot
+  - PATH=$PATH:/home/travis/build/dolphin-bin
+  - DOLPHIN_PARAMS_SECTION=Travis
+
+script:
+  #	ajax - initial mapping
+  - phpunit unitTesting/ngsimport_unittest.php
+  - phpunit unitTesting/ajax/ngsalterdb_unittest.php
+  - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/2016_08_16_travis.sql
+  - sudo mysql -e "use biocore; DELETE FROM amazon_credentials WHERE id = 1" -uroot
+  #	Run workflow
+  - cd scripts
+  - travis_wait 20 python dolphin_wrapper.py -r 4 -c Travis
+  - tree /home/travis/build/testrun1/
+  - grep "." /home/travis/build/testrun1/tmp/logs/*
+  - grep "." ../tmp/logs/run4/*
+  - cat /home/travis/build/testrun1/scripts/stepCheck.bash
+  #	ajax
+  #- phpunit unitTesting/ajax/tablegenerator_unittest.php
+  #- phpunit unitTesting/ajax/statquerydb_unittest.php
+  #- phpunit unitTesting/ajax/sessionrequests_unittest.php
+  #- phpunit unitTesting/ajax/profiledb_unittest.php
+  #- phpunit unitTesting/ajax/ngsquerydb_unittest.php
+  #- phpunit unitTesting/ajax/ngsfastlanedb_unittest.php
+  #- phpunit unitTesting/ajax/ngs_tables_unittest.php
+  #- phpunit unitTesting/ajax/kill_pid_unittest.php
+  #- phpunit unitTesting/ajax/initialmappingdb_unittest.php
+  #- phpunit unitTesting/ajax/dolphinfuncs_unittest.php
+  #- phpunit unitTesting/ajax/dataservice_unittest.php
+  #- phpunit unitTesting/ajax/datajobs_unittest.php
+  #- phpunit unitTesting/ajax/dataerrorlogs_unittest.php
+  #- phpunit unitTesting/ajax/dashboardquerydb_unittest.php
+  #- phpunit unitTesting/ajax/browse_edit_unittest.php
+  #- phpunit unitTesting/ajax/admindashboardquerydb_unittest.php
+  #- phpunit unitTesting/ajax/adminstatquerydb_unittest.php
+  #	api
+  #- phpunit unitTesting/api/funcs_unittest.php
+
+after_script:
+  - mysql -e "show databases;" -uroot
+  - mysql -e "use biocore; show tables;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_samples;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_lanes;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_experiment_series;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_dirs;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_runlist;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_runparams;" -uroot
+  - mysql -e "use biocore; SELECT * FROM report_list;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_createdtables;" -uroot
+  - mysql -e "use biocore; SELECT * FROM amazon_credentials;" -uroot
+  - mysql -e "use biocore; SELECT * FROM groups;" -uroot
+  - mysql -e "use biocore; SELECT * FROM user_group_requests;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_wkeylist;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_organism;" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_fastq_files" -uroot
+  - mysql -e "use biocore; SELECT * FROM ngs_temp_sample_files" -uroot
+  - mysql -e "use biocore; SELECT * FROM galaxy_run" -uroot
+  - mysql -e "use biocore; SELECT * FROM users" -uroot
+  - mysql -e "use biocore; SELECT * FROM user_group" -uroot
+  - mysql -e "use biocore; SELECT * FROM jobs" -uroot
+  - mysql -e "use biocore; SELECT * FROM services" -uroot
+  - mysql -e "use biocore; SELECT * FROM jobsout" -uroot
+  - mysql -e "use biocore; SELECT * FROM workflows" -uroot
+  - mysql -e "use biocore; SELECT * FROM service_run" -uroot
+  - mysql -e "use biocore; SELECT * FROM jobstats" -uroot
+  - mysql -e "use biocore; SELECT * FROM workflows" -uroot
+  - mysql -e "use biocore; SELECT * FROM workflow_run" -uroot
+  
