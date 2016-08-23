@@ -70,7 +70,7 @@ script:
   - grep "." /home/travis/build/testrun1/tmp/logs/*
   - grep "." ../tmp/logs/run4/*
   - cat /home/travis/build/testrun1/scripts/stepCheck.bash
-  #	ajax
+  #	additional ajax
   #- phpunit unitTesting/ajax/tablegenerator_unittest.php
   #- phpunit unitTesting/ajax/statquerydb_unittest.php
   #- phpunit unitTesting/ajax/sessionrequests_unittest.php
