@@ -23,7 +23,7 @@ install:
   ######################
   # CHANGE BRANCH HERE #
   ######################
-  - git clone --branch=2016_07_18_travisupdate https://github.com/UMMS-biocore/dolphin-tools.git /home/travis/build/dolphin-ui
+  - git clone --branch=2016_07_18_travisupdate https://github.com/Rhaknam/dolphin-ui.git /home/travis/build/dolphin-ui
   - cd /home/travis/build/dolphin-ui
   
 before_script:
