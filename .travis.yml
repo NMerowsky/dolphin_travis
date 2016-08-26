@@ -52,18 +52,22 @@ before_script:
   - sudo mysql -e "CREATE USER 'bioinfo'@'localhost' IDENTIFIED BY 'bioinfo2013'; GRANT ALL ON *.* TO 'bioinfo'@'localhost';" -uroot
   - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/biocoredb.sql
   - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/2016_08_15_sqlmerge.sql
+  - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/travis.sql
   - sudo mysql -e "use biocore; UPDATE ngs_samples set samplename = name;" -uroot
   - sudo mysql -e "use biocore; INSERT INTO amazon_credentials ( aws_access_key_id, aws_secret_access_key, bucket ) VALUES ( 'test_access', 'test_secret', 'test_bucket' );" -uroot
   - sudo mysql -e "use biocore; INSERT INTO ngs_organism (organism, organism_symbol) VALUES ('mousetest', 'mm10'); UPDATE ngs_samples SET organism_id = 1;" -uroot
   - PATH=$PATH:/home/travis/build/dolphin-bin
   - DOLPHIN_PARAMS_SECTION=Travis
-  - sudo curl http://localhost
+  - sudo curl http://localhost/dolphin/public
 
 script:
   #	ajax - initial mapping
+  
   - phpunit unitTesting/ngsimport_unittest.php
   - phpunit unitTesting/ajax/ngsalterdb_unittest.php
-  - sudo mysql --user=bioinfo --password=bioinfo2013 biocore < db/travis.sql
+  - sudo mysql -e "use biocore; UPDATE ngs_runparams SET owner_id = 209 where id = 4;" -uroot
+  - sudo mysql -e "use biocore; UPDATE ngs_runlist SET owner_id = 209 where id IN (19,20);" -uroot
+  - sudo mysql -e "use biocore; DELETE FROM amazon_credentials WHERE id = 1;" -uroot
   #	Run workflow
   - cd scripts
   - travis_wait 20 python dolphin_wrapper.py -r 4 -c Travis
