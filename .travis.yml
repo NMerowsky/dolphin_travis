@@ -68,9 +68,8 @@ script:
   - cd scripts
   - travis_wait 20 python dolphin_wrapper.py -r 4 -c Travis
   - tree /home/travis/build/testrun1/
-  - grep "." /home/travis/build/testrun1/tmp/logs/*
-  - grep "." ../tmp/logs/run4/*
-  - cat /home/travis/build/testrun1/scripts/stepCheck.bash
+  - sudo ../unitTesting/run_insertion.sh
+  - travis_wait 20 python dolphin_wrapper.py -r 5 -c Travis
   #	additional ajax
   #- phpunit unitTesting/ajax/tablegenerator_unittest.php
   #- phpunit unitTesting/ajax/statquerydb_unittest.php
