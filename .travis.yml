@@ -24,7 +24,7 @@ install:
   # CHANGE BRANCH HERE #
   # use --branch=      #
   ######################
-  - git clone --branch=2016_07_18_travisupdate https://github.com/Rhaknam/dolphin-ui.git /home/travis/build/dolphin-ui
+  - git clone --branch=2016_08_26_travisupdate https://github.com/Rhaknam/dolphin-ui.git /home/travis/build/dolphin-ui
   - cd /home/travis/build/dolphin-ui
   
 before_script:
@@ -57,7 +57,6 @@ before_script:
   - sudo mysql -e "use biocore; INSERT INTO ngs_organism (organism, organism_symbol) VALUES ('mousetest', 'mm10'); UPDATE ngs_samples SET organism_id = 1;" -uroot
   - PATH=$PATH:/home/travis/build/dolphin-bin
   - DOLPHIN_PARAMS_SECTION=Travis
-  - sudo curl http://localhost/dolphin
 
 script:
   #	ajax - initial mapping
