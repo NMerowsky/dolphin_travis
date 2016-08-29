@@ -74,7 +74,7 @@ script:
   #	RSEM
   - travis_wait 20 python dolphin_wrapper.py -r 6 -c Travis
   #	Tophat2
-  - travis_wait 20 python dolphin_wrapper.py -r 7 -c Travis
+  #- travis_wait 20 python dolphin_wrapper.py -r 7 -c Travis
   #	additional ajax
   #- phpunit unitTesting/ajax/tablegenerator_unittest.php
   #- phpunit unitTesting/ajax/statquerydb_unittest.php
